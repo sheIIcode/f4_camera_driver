@@ -70,12 +70,15 @@ DMA_HandleTypeDef hdma_usart2_tx;
 /* USER CODE BEGIN PV */
 #define ROWS 240
 #define PIXS 320
-#define UART_BUFFER_SIZE 7
+//#define UART_BUFFER_SIZE 1
 
 volatile uint16_t vsCnt, pxCnt;
 volatile uint16_t line;
+volatile uint8_t uart_buffer[16];
+volatile uint8_t buffer_head, buffer_tail;
 
-uint8_t Received[UART_BUFFER_SIZE];
+//uint8_t Received[UART_BUFFER_SIZE];
+uint8_t Received[8];
 
 uint8_t tab[ROWS][PIXS];
 
@@ -100,12 +103,24 @@ static void MX_USART1_UART_Init(void);
 uint8_t data;
 
 void init() {
-	for(int i = 0; i < 198 ; i ++){
+	for(int i = 3; i < OV7670_REG_NUM ; i ++){
 		HAL_I2C_Mem_Write(&hi2c2, (0x21<<1), OV7670_reg[i][0], 1, &OV7670_reg[i][1], 1, 100);
 		HAL_Delay(1);
 		HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), OV7670_reg[i][0], 1, &data, 1, 100);
 	}
 }
+
+//static void wrSensorRegs8_8(const struct regval_list reglist[]){
+//	const struct regval_list *next = reglist;
+//	for(;;){
+//		uint8_t reg_addr = (&next->reg_num);
+//		uint8_t reg_val =(&next->value);
+//		if((reg_addr==255)&&(reg_val==255))
+//			break;
+//		wrReg(reg_addr, reg_val);
+//		next++;
+//	}
+//}
 
 /* USER CODE END 0 */
 
@@ -149,10 +164,11 @@ int main(void)
 //  HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
-  HAL_UART_Receive_IT(&huart1, &Received, UART_BUFFER_SIZE);
+  HAL_UART_Receive_IT(&huart2, &Received, 1);
 
   HAL_Delay(100);
   init();
+  printf("start\r\n");
 
   /* USER CODE END 2 */
 
@@ -160,6 +176,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   uint32_t data;
+  buffer_head, buffer_tail = 0;
 
   while (1)
   {
@@ -167,18 +184,18 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  // send info from python which lines are broken, resend, hold until all ok
-	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_SET );
+/*	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_SET );
 	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_RESET );
 
 	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_SET ){
 
 		 while( (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9) == GPIO_PIN_SET ) ){
 			 while( (GPIOC->IDR & GPIO_PIN_8) == 0 );
-
+			 tab[line][pxCnt++] = (GPIOC->IDR & 0xff);
 			 while( (GPIOC->IDR & GPIO_PIN_8) == GPIO_PIN_8 );
 
 			 while( (GPIOC->IDR & GPIO_PIN_8) == 0 );
-			 tab[line][pxCnt++] = (GPIOC->IDR & 0xff);
+
 			 while( (GPIOC->IDR & GPIO_PIN_8) == GPIO_PIN_8 );
 		 }
 
@@ -200,13 +217,13 @@ int main(void)
 		 HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
 
 			for(uint8_t i = 0; i < ROWS; i++){
-				printf("[%d,", i);
+//				printf("[%d,", i);
 				for(uint16_t j = 0; j < PIXS; j += 4){
 					uint32_t n = (tab[i][j] << 24) | (tab[i][j+1] << 16) | (tab[i][j+2] << 8) | tab[i][j+3];
-					printf("%08x,", n);
+//					printf("%08x,", n);
 
 				}
-				printf("%d\r\n", i);
+//				printf("%d\r\n", i);
 			}
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
 //		HAL_UART_Transmit(&huart1, "hello", 5, 111);
@@ -214,7 +231,7 @@ int main(void)
 //	  HAL_DMA_Start(&hdma_usart2_tx, (uint32_t)&data, (uint32_t)&(huart2.Instance->DR), 8);
 
 		line = 0;
-
+*/
 	 }// MAIN while
   /* USER CODE END 3 */
 }
@@ -450,7 +467,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 1000000;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -530,29 +547,80 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+
+//change buffer size to 1 and collect each char in circle buffer
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+//	buffer_head &= 0x1F;
+//	todo check in general how this trick work on simple ++ and delay
+
+//	if(Received[0] == 'r' || (buffer_head + 1) & 0x1f == buffer_tail){
+//		printf("Reading...\r\n");
+//		while(buffer_tail !=  buffer_head){
+//			buffer_tail &= 0x1F;
+////			char c = uart_buffer[buffer_tail++];
+//			printf((char) uart_buffer[buffer_tail++]);
+//			printf("\r\n");
+//		}
+//	} else {
+//
+//	uart_buffer[buffer_head++] = Received[0];
+	char c = Received[0];
+	printf(c);
+
+
+//	if(buffer_head == 6){
+//		for(int i = 0; i< 6 ; i++){
+//			printf(uart_buffer[i]);
+//		}
+//		printf("\r\n");
+//
+//		buffer_head = 0;
+//	}
+
+//	printf(buf);
+//	printf("\r\n");
+
+
+/*
+	uint8_t string_size;
+	uint8_t string_to_send[32];
+
 	char * token = strtok(Received, ",");
+	char * action_type = token;
+	token = strtok(NULL, ",");
 	uint8_t reg = atoi(token,10);
 	token = strtok(NULL, ",");
 	uint8_t val = atoi(token, 10);
 
-	uint8_t string_size;
+	if((char)action_type[0] == 'r'){
+		HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), reg, 1, &data, 1, 100);
+		string_size = sprintf(string_to_send, "read reg: %d, val: %d\n\r", reg, data);
+		HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
+	} else{
 
-	uint8_t string_to_send[32];
-	string_size = sprintf(string_to_send, "reg: %d, val: %d\n\r", reg, val);
-	HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
+		string_size = sprintf(string_to_send, "reg: %d, val: %d\n\r", reg, val);
+		HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
 
-	HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), reg, 1, &data, 1, 100);
-	string_size = sprintf(string_to_send, "before reg: %d, val: %d\n\r", reg, data);
-	HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
+		HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), reg, 1, &data, 1, 100);
+		string_size = sprintf(string_to_send, "before reg: %d, val: %d\n\r", reg, data);
+		HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
 
-	HAL_I2C_Mem_Write(&hi2c2, (0x21<<1), reg, 1, val, 1, 100);
+		HAL_I2C_Mem_Write(&hi2c2, (0x21<<1), reg, 1, val, 1, 100);
 
-	HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), reg, 1, &data, 1, 100);
-	string_size = sprintf(string_to_send, "after reg: %d, val: %d\n\r", reg, data);
-	HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
+		HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), reg, 1, &data, 1, 100);
+		string_size = sprintf(string_to_send, "after reg: %d, val: %d\n\r", reg, data);
+		HAL_UART_Transmit(&huart1, string_to_send, string_size, 100);
+	}
 
-	HAL_UART_Receive_IT(&huart1, &Received, UART_BUFFER_SIZE); // Ponowne włączenie nasłuchiwania
+*/
+//	} //else
+
+//	printf("tail: %d \r\n", buffer_tail);
+//	printf("head: %d \r\n", buffer_head);
+//	printf(uart_buffer);
+//	printf("\r\n");
+
+	HAL_UART_Receive_IT(&huart2, &Received, 1); // Ponowne włączenie nasłuchiwania
 }
 
 static inline void DWT_Delay(uint32_t us) // microseconds

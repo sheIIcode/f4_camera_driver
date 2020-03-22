@@ -24,24 +24,24 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-i2c_basic.elf \
+f4_camera_driver.elf \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-i2c_basic.list \
+f4_camera_driver.list \
 
 OBJCOPY_HEX += \
-i2c_basic.hex \
+f4_camera_driver.hex \
 
 
 # All Target
-all: i2c_basic.elf secondary-outputs
+all: f4_camera_driver.elf secondary-outputs
 
 # Tool invocations
-i2c_basic.elf: $(OBJS) $(USER_OBJS) ../STM32F446RETx_FLASH.ld
-	arm-none-eabi-gcc -o "i2c_basic.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"../STM32F446RETx_FLASH.ld" --specs=nosys.specs -Wl,-Map="i2c_basic.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+f4_camera_driver.elf: $(OBJS) $(USER_OBJS) ../STM32F446RETx_FLASH.ld
+	arm-none-eabi-gcc -o "f4_camera_driver.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"../STM32F446RETx_FLASH.ld" --specs=nosys.specs -Wl,-Map="f4_camera_driver.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -50,13 +50,13 @@ default.size.stdout: $(EXECUTABLES)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-i2c_basic.list: $(EXECUTABLES)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "i2c_basic.list"
+f4_camera_driver.list: $(EXECUTABLES)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "f4_camera_driver.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-i2c_basic.hex: $(EXECUTABLES)
-	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "i2c_basic.hex"
+f4_camera_driver.hex: $(EXECUTABLES)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "f4_camera_driver.hex"
 	@echo 'Finished building: $@'
 	@echo ' '
 
