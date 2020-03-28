@@ -103,7 +103,7 @@ static void MX_USART1_UART_Init(void);
 uint8_t data;
 
 void init() {
-	for(int i = 3; i < OV7670_REG_NUM ; i ++){
+	for(int i = 0; i < OV7670_REG_NUM ; i ++){
 		HAL_I2C_Mem_Write(&hi2c2, (0x21<<1), OV7670_reg[i][0], 1, &OV7670_reg[i][1], 1, 100);
 		HAL_Delay(1);
 		HAL_I2C_Mem_Read(&hi2c2, (0x21<<1), OV7670_reg[i][0], 1, &data, 1, 100);
@@ -184,7 +184,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  // send info from python which lines are broken, resend, hold until all ok
-/*	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_SET );
+	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_SET );
 	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_RESET );
 
 	  while(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == GPIO_PIN_SET ){
@@ -214,24 +214,26 @@ int main(void)
 
 	  }//end of VS
 
-		 HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
-
-			for(uint8_t i = 0; i < ROWS; i++){
-//				printf("[%d,", i);
-				for(uint16_t j = 0; j < PIXS; j += 4){
-					uint32_t n = (tab[i][j] << 24) | (tab[i][j+1] << 16) | (tab[i][j+2] << 8) | tab[i][j+3];
-//					printf("%08x,", n);
-
-				}
-//				printf("%d\r\n", i);
-			}
+	  	printf("start\r\n");
 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
-//		HAL_UART_Transmit(&huart1, "hello", 5, 111);
+
+		for(uint8_t i = 0; i < ROWS; i++){
+			printf("[%d,", i);
+
+			for(uint16_t j = 0; j < PIXS; j += 4){
+				uint32_t n = (tab[i][j] << 24) | (tab[i][j+1] << 16) | (tab[i][j+2] << 8) | tab[i][j+3];
+				printf("%08x,", n);
+			}
+			printf("%d\r\n", i);
+		}
+		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
+
+		HAL_UART_Transmit(&huart1, "start\r\n", 7, 100);
 
 //	  HAL_DMA_Start(&hdma_usart2_tx, (uint32_t)&data, (uint32_t)&(huart2.Instance->DR), 8);
 
 		line = 0;
-*/
+
 	 }// MAIN while
   /* USER CODE END 3 */
 }
@@ -434,7 +436,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 256000;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -467,7 +469,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 256000; //115200
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -533,7 +535,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PC11 */
@@ -546,7 +548,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
 
 //change buffer size to 1 and collect each char in circle buffer
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
@@ -636,7 +637,7 @@ PUTCHAR_PROTOTYPE
 {
  /* Place your implementation of fputc here */
  /* e.g. write a character to the USART2 and Loop until the end of transmission */
- HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 1);
+ HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 1);
 
 return ch;
 }
